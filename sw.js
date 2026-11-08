@@ -1,5 +1,5 @@
 // แก้โค้ดหน้าเว็บเมื่อไร ให้เปลี่ยนเลขเวอร์ชันนี้ เพื่อให้เครื่องผู้ใช้โหลดไฟล์ใหม่
-const CACHE = 'pos-v3';
+const CACHE = 'pos-v4';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

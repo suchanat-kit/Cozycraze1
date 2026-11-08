@@ -37,6 +37,16 @@
   .prod .stock { font-size: 12px; color: var(--muted); }
   .prod .stock.low { color: var(--warn); font-weight: 600; }
   .prod[disabled] { opacity: .45; }
+  .prod .pic { margin: -12px -12px 4px; aspect-ratio: 4 / 3; border-radius: var(--radius) var(--radius) 0 0; overflow: hidden;
+    background: #e3eeec; display: grid; place-items: center; color: var(--brand); font-size: 30px; font-weight: 700; }
+  .prod .pic img, .thumb img, .img-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .prod .badge { z-index: 1; }
+  .thumb { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 10px; overflow: hidden; background: #e3eeec;
+    display: grid; place-items: center; color: var(--brand); font-weight: 700; }
+  .img-pick { display: flex; align-items: center; gap: 14px; }
+  .img-prev { width: 88px; height: 88px; border-radius: 12px; overflow: hidden; background: #eef2f1; display: grid; place-items: center;
+    color: var(--muted); font-size: 12px; flex: 0 0 88px; }
+  .img-btns { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
   .prod .badge { position: absolute; top: 8px; right: 8px; background: var(--brand); color: #fff; font-size: 12px;
     min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; display: grid; place-items: center; }
   .cartbar { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 6;
@@ -60,8 +70,8 @@
   .val.low { color: var(--warn); }
   .link { color: var(--brand); font-size: 13px; font-weight: 600; padding: 6px 4px; }
   h2 { font-size: 15px; margin: 18px 4px 8px; color: var(--muted); font-weight: 600; }
-  label.field { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
-  label.field:last-child { border-bottom: 0; }
+  .field { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .field:last-child { border-bottom: 0; }
   label.field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
   label.field input, label.field select { width: 100%; border: 0; outline: 0; font-size: 15px; background: transparent; padding: 2px 0; }
   .btn { display: block; width: 100%; padding: 14px; border-radius: var(--radius); background: var(--brand); color: #fff; font-weight: 700; text-align: center; }
@@ -221,6 +231,11 @@
       <label class="field"><span>รหัสสินค้า (เว้นว่างไว้ ระบบจะสร้างให้ เช่น P007)</span><input id="pf-id" autocapitalize="characters" autocomplete="off"></label>
       <label class="field"><span>ชื่อสินค้า</span><input id="pf-name" autocomplete="off"></label>
       <label class="field"><span>ราคา (บาท)</span><input id="pf-price" type="number" inputmode="decimal" step="any" min="0"></label>
+      <div class="field"><span style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px">รูปสินค้า (ไม่บังคับ)</span>
+        <div class="img-pick"><div class="img-prev" id="pf-img-prev">ไม่มีรูป</div>
+          <div class="img-btns"><label class="link" for="pf-img" style="cursor:pointer">เลือกรูป / ถ่ายรูป</label>
+            <input type="file" id="pf-img" accept="image/*" hidden>
+            <button class="link" id="pf-img-del" style="color:var(--danger)">ลบรูป</button></div></div></div>
       <label class="field" id="pf-stock-wrap"><span>จำนวนเริ่มต้น</span><input id="pf-stock" type="number" inputmode="numeric" min="0" placeholder="0"></label>
     </div>
     <p class="note" id="pf-note"></p>
@@ -313,9 +328,10 @@
         if (body.isNew) {
           if (!id) id = 'P' + String(p.reduce((m, x) => { const k = /^P(\d+)$/.exec(x.id); return k ? Math.max(m, +k[1]) : m; }, 0) + 1).padStart(3, '0');
           if (find(id)) throw new Error('รหัส ' + id + ' มีอยู่แล้ว');
-          p.push({ id, name, price: r2(price), stock: Math.max(0, Math.trunc(+body.stock || 0)) });
+          p.push({ id, name, price: r2(price), stock: Math.max(0, Math.trunc(+body.stock || 0)), image: body.image || '' });
         } else {
           const x = find(id); if (!x) throw new Error('ไม่พบสินค้า'); x.name = name; x.price = r2(price);
+          if (body.image !== undefined) x.image = body.image;
         }
         store.set('pos.demoProducts', p); return { ok: true, id, products: p };
       }
@@ -356,6 +372,8 @@
   }
 
   const byId = id => products.find(p => p.id === id);
+  const validImg = s => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(s);
+  const picHTML = p => validImg(p.image) ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : esc([...(p.name || '?')][0]);
 
   // ---------- render ----------
   function renderHeader() {
@@ -374,6 +392,7 @@
       const inCart = cart[p.id] || 0, left = p.stock - inCart;
       return `<button class="prod" data-add="${esc(p.id)}" ${left <= 0 ? 'disabled' : ''}>
         ${inCart ? `<span class="badge">${inCart}</span>` : ''}
+        <span class="pic">${picHTML(p)}</span>
         <span class="name">${esc(p.name)}</span>
         <span class="stock ${p.stock <= cfg.lowStock ? 'low' : ''}">${left <= 0 ? 'หมด' : 'เหลือ ' + left}</span>
         <span class="price">${money0(p.price)}</span></button>`;
@@ -421,6 +440,7 @@
   function renderStock() {
     const list = filterList($('#search-stock').value);
     $('#stock-list').innerHTML = list.length ? list.map(p => `<div class="row">
+      <div class="thumb">${picHTML(p)}</div>
       <div class="grow"><div>${esc(p.name)}</div><div class="sub">${esc(p.id)} · ${money0(p.price)}</div>
         <div><button class="link" data-edit="${esc(p.id)}">แก้ไข</button> · <button class="link" data-bulk="${esc(p.id)}">ปรับหลายชิ้น</button></div></div>
       <div class="stepper"><button data-adj="${esc(p.id)}" data-d="-1">−</button><span class="val ${p.stock <= cfg.lowStock ? 'low' : ''}">${p.stock}</span><button data-adj="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')
@@ -687,6 +707,30 @@
 
   // ---------- เพิ่ม / แก้ไข / ลบสินค้า ----------
   let editingId = null;
+  let pfImage;            // undefined = ไม่เปลี่ยน, '' = ลบรูป, 'data:...' = รูปใหม่
+  function renderFormImage(src) {
+    $('#pf-img-prev').innerHTML = validImg(src) ? `<img src="${esc(src)}" alt="">` : 'ไม่มีรูป';
+    $('#pf-img-del').style.display = validImg(src) ? '' : 'none';
+  }
+
+  // ย่อรูปเป็นสี่เหลี่ยมจัตุรัส 240px แบบ JPEG ให้เล็กพอเก็บในช่องเดียวของชีต
+  async function resizeImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('เปิดไฟล์รูปไม่ได้')); i.src = url; });
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+      for (const [size, q] of [[240, .72], [200, .6], [160, .5]]) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = size;
+        const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        const data = cv.toDataURL('image/jpeg', q);
+        if (data.length < 45000) return data;
+      }
+      throw new Error('รูปใหญ่เกินไป');
+    } finally { URL.revokeObjectURL(url); }
+  }
+
   function openProductForm(id) {
     editingId = id || null;
     const p = id ? byId(id) : null;
@@ -695,6 +739,7 @@
     $('#pf-name').value = p ? p.name : '';
     $('#pf-price').value = p ? p.price : '';
     $('#pf-stock').value = '';
+    pfImage = undefined; $('#pf-img').value = ''; renderFormImage(p ? p.image : '');
     $('#pf-stock-wrap').style.display = p ? 'none' : '';
     $('#pf-delete').style.display = p ? '' : 'none';
     $('#pf-note').textContent = p ? `สต็อกตอนนี้ ${p.stock} ชิ้น · ปรับจำนวนด้วยปุ่ม − / + ในหน้าสต็อก (เพื่อให้มีประวัติใน StockLog)` : '';
@@ -711,6 +756,7 @@
   async function saveProduct() {
     const body = { action: 'saveProduct', isNew: !editingId, id: $('#pf-id').value.trim(),
       name: $('#pf-name').value.trim(), price: $('#pf-price').value, stock: $('#pf-stock').value };
+    if (pfImage !== undefined) body.image = pfImage;
     if (!body.name) return toast('กรุณาใส่ชื่อสินค้า', true);
     if (body.price === '' || +body.price < 0) return toast('กรุณาใส่ราคาให้ถูกต้อง', true);
     const btn = $('#pf-save'); btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
@@ -737,6 +783,12 @@
   $('#add-prod').addEventListener('click', () => openProductForm(null));
   $('#pf-save').addEventListener('click', saveProduct);
   $('#pf-delete').addEventListener('click', deleteProduct);
+  $('#pf-img').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { pfImage = await resizeImage(f); renderFormImage(pfImage); }
+    catch (err) { toast(err.message, true); }
+  });
+  $('#pf-img-del').addEventListener('click', () => { pfImage = ''; $('#pf-img').value = ''; renderFormImage(''); });
   $$('nav button').forEach(b => b.addEventListener('click', () => {
     $$('nav button').forEach(x => x.classList.toggle('active', x === b));
     $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + b.dataset.view));
