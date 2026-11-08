@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ร้านค้า POS</title>
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ร้านค้า POS">
+<style>
+  :root {
+    --brand: #0f766e; --brand-2: #115e59; --bg: #f4f5f4; --card: #fff; --text: #1c1f1e;
+    --muted: #6b716f; --line: #e3e6e4; --danger: #c2410c; --warn: #b45309; --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Sarabun", "Noto Sans Thai", "Leelawadee UI", Tahoma, system-ui, sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--brand); color: #fff;
+    padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { font-size: 12px; padding: 3px 8px; border-radius: 99px; background: rgba(255,255,255,.18); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.12); }
+  main { padding: 12px 12px 170px; max-width: 900px; margin: 0 auto; }
+  .view { display: none; } .view.active { display: block; }
+  .search { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .prod { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px; text-align: left; min-height: 96px; display: flex; flex-direction: column; gap: 6px; }
+  .prod:active { transform: scale(.98); }
+  .prod .name { font-weight: 600; line-height: 1.25; }
+  .prod .price { color: var(--brand); font-weight: 700; margin-top: auto; }
+  .prod .stock { font-size: 12px; color: var(--muted); }
+  .prod .stock.low { color: var(--warn); font-weight: 600; }
+  .prod[disabled] { opacity: .45; }
+  .prod .badge { position: absolute; top: 8px; right: 8px; background: var(--brand); color: #fff; font-size: 12px;
+    min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; display: grid; place-items: center; }
+  .cartbar { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 6;
+    padding: 10px 12px; display: none; }
+  .cartbar.show { display: block; }
+  .cartbar button { width: 100%; max-width: 876px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;
+    background: var(--brand); color: #fff; padding: 14px 18px; border-radius: var(--radius); font-weight: 700; box-shadow: 0 6px 20px rgba(15,118,110,.35); }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; background: var(--card); border-top: 1px solid var(--line);
+    display: flex; padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; color: var(--muted); }
+  nav button.active { color: var(--brand); font-weight: 700; }
+  nav svg, .icon-btn svg { width: 22px; height: 22px; }
+  .list { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row .sub { font-size: 12px; color: var(--muted); }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .stepper button { width: 34px; height: 34px; border-radius: 10px; background: #eef2f1; font-size: 18px; font-weight: 700; }
+  .stepper .val { min-width: 36px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .val.low { color: var(--warn); }
+  .link { color: var(--brand); font-size: 13px; font-weight: 600; padding: 6px 4px; }
+  h2 { font-size: 15px; margin: 18px 4px 8px; color: var(--muted); font-weight: 600; }
+  label.field { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  label.field:last-child { border-bottom: 0; }
+  label.field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  label.field input, label.field select { width: 100%; border: 0; outline: 0; font-size: 15px; background: transparent; padding: 2px 0; }
+  .btn { display: block; width: 100%; padding: 14px; border-radius: var(--radius); background: var(--brand); color: #fff; font-weight: 700; text-align: center; }
+  .btn.ghost { background: #e7efed; color: var(--brand-2); }
+  .btn:disabled { opacity: .5; }
+  .btns { display: flex; gap: 8px; margin-top: 12px; } .btns .btn { flex: 1; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+  .note { font-size: 13px; color: var(--muted); padding: 8px 4px; line-height: 1.5; }
+  /* sheet / modal */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; display: none; align-items: flex-end; justify-content: center; }
+  .sheet-bg.show { display: flex; }
+  .sheet { background: var(--bg); width: 100%; max-width: 560px; max-height: 92vh; overflow: auto; border-radius: 20px 20px 0 0;
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); }
+  .sheet h3 { margin: 0 0 12px; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+  .total { display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; padding: 14px 4px; }
+  .quick { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .quick button { padding: 8px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-weight: 600; }
+  .money-in { width: 100%; font-size: 26px; font-weight: 700; padding: 10px 14px; border-radius: var(--radius); border: 2px solid var(--brand); background: var(--card); text-align: right; }
+  .change { display: flex; justify-content: space-between; padding: 10px 4px; font-size: 17px; }
+  .change b { color: var(--brand); } .change b.neg { color: var(--danger); }
+  .toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%); background: #222; color: #fff;
+    padding: 10px 16px; border-radius: 12px; z-index: 50; font-size: 14px; max-width: 90vw; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; } .toast.err { background: var(--danger); }
+  /* receipt */
+  .paper { background: #fff; color: #000; margin: 0 auto; padding: 12px 10px; font-size: 13px; line-height: 1.45;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08); font-family: "Sarabun", Tahoma, monospace; }
+  .paper.w80 { width: 80mm; max-width: 100%; } .paper.w58 { width: 58mm; max-width: 100%; font-size: 12px; }
+  .paper .c { text-align: center; } .paper .shop { font-size: 1.25em; font-weight: 700; }
+  .paper hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+  .paper .ln { display: flex; justify-content: space-between; gap: 8px; }
+  .paper .ln span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .paper .item-sub { color: #333; padding-left: 8px; }
+  .paper .big { font-weight: 700; font-size: 1.15em; }
+  #print-area { display: none; }
+  @media print {
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block; }
+    #print-area .paper { box-shadow: none; padding: 0 2mm; }
+    html, body { background: #fff; }
+  }
+</style>
+<style id="page-size">@page { size: 80mm auto; margin: 3mm 0; }</style>
+</head>
+<body>
+
+<header>
+  <h1 id="shop-title">ร้านค้า POS</h1>
+  <span class="pill" id="mode-pill">เดโม</span>
+  <button class="icon-btn" id="sync-btn" aria-label="ซิงก์">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>
+  </button>
+</header>
+
+<main>
+  <!-- ขาย -->
+  <section class="view active" id="view-sell">
+    <input class="search" id="search" type="search" placeholder="ค้นหาสินค้า…">
+    <div class="grid" id="prod-grid"></div>
+  </section>
+
+  <!-- สต็อก -->
+  <section class="view" id="view-stock">
+    <button class="btn" id="add-prod" style="margin-bottom:12px">+ เพิ่มสินค้า</button>
+    <input class="search" id="search-stock" type="search" placeholder="ค้นหาสินค้า…">
+    <div class="list" id="stock-list"></div>
+    <p class="note">กด − / + เพื่อปรับทีละ 1 ชิ้น หรือกด “ปรับหลายชิ้น” เพื่อรับของเข้าหรือตัดของเสียทีละมาก ๆ ·
+      กด “แก้ไข” เพื่อเปลี่ยนชื่อ ราคา หรือลบสินค้า ทุกอย่างบันทึกลง Google Sheets ทันที (ประวัติอยู่ในชีต <b>StockLog</b>)</p>
+  </section>
+
+  <!-- ใบเสร็จ -->
+  <section class="view" id="view-receipts">
+    <div class="list" id="receipt-list"></div>
+    <p class="note">ประวัติในหน้านี้เก็บไว้ในเครื่อง 200 ใบล่าสุด ประวัติทั้งหมดอยู่ในชีต <b>Receipts</b> และ <b>SaleItems</b></p>
+  </section>
+
+  <!-- ตั้งค่า -->
+  <section class="view" id="view-settings">
+    <h2>ข้อมูลร้าน (แสดงบนใบเสร็จ)</h2>
+    <div class="list">
+      <label class="field"><span>ชื่อร้าน</span><input id="cfg-shopName" placeholder="ร้านของฉัน"></label>
+      <label class="field"><span>ที่อยู่</span><input id="cfg-shopAddress" placeholder="(ไม่บังคับ)"></label>
+      <label class="field"><span>เบอร์โทร</span><input id="cfg-shopPhone" inputmode="tel" placeholder="(ไม่บังคับ)"></label>
+      <label class="field"><span>เลขประจำตัวผู้เสียภาษี</span><input id="cfg-taxId" inputmode="numeric" placeholder="(ไม่บังคับ)"></label>
+      <label class="field"><span>ข้อความท้ายใบเสร็จ</span><input id="cfg-footer" placeholder="ขอบคุณที่ใช้บริการ"></label>
+      <label class="field"><span>ขนาดกระดาษ</span>
+        <select id="cfg-paper"><option value="80">80 มม. (เครื่องพิมพ์ความร้อน)</option><option value="58">58 มม. (เครื่องพิมพ์พกพา)</option></select></label>
+      <label class="field"><span>แจ้งเตือนสต็อกต่ำเมื่อเหลือ ≤</span><input id="cfg-lowStock" type="number" min="0" inputmode="numeric"></label>
+    </div>
+    <h2>เครื่องพิมพ์ Bluetooth</h2>
+    <div class="list">
+      <div class="row"><div class="grow"><div id="printer-name">ยังไม่ได้เชื่อมต่อ</div><div class="sub" id="printer-sub">เครื่องพิมพ์ความร้อนที่รองรับ Bluetooth LE</div></div>
+        <button class="link" id="bt-connect">เชื่อมต่อ</button></div>
+      <label class="field"><span>หลังกดยืนยันการขาย</span>
+        <select id="cfg-autoPrint"><option value="1">พิมพ์ใบเสร็จอัตโนมัติ</option><option value="0">แสดงใบเสร็จก่อน แล้วค่อยกดพิมพ์</option></select></label>
+      <label class="field"><span>ความเร็วการส่งข้อมูล</span>
+        <select id="cfg-btSpeed"><option value="normal">ปกติ</option><option value="slow">ช้า (เลือกข้อนี้ถ้าพิมพ์ออกมาเพี้ยนหรือขาดหาย)</option></select></label>
+    </div>
+    <div class="btns"><button class="btn ghost" id="bt-test">พิมพ์ทดสอบ</button></div>
+    <p class="note" id="bt-note"></p>
+
+    <h2>การเชื่อมต่อ Google Sheets</h2>
+    <div class="list">
+      <label class="field"><span>Apps Script Web App URL (ปล่อยว่าง = โหมดเดโม)</span><input id="cfg-apiUrl" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <label class="field"><span>รหัส API (ตรงกับ API_KEY ใน Code.gs)</span><input id="cfg-key" type="password" autocomplete="off"></label>
+    </div>
+    <div class="btns">
+      <button class="btn ghost" id="test-btn">ทดสอบการเชื่อมต่อ</button>
+      <button class="btn" id="save-btn">บันทึก</button>
+    </div>
+    <p class="note">ในโหมดเดโม ข้อมูลจะเก็บในเครื่องนี้เท่านั้น เมื่อใส่ URL แล้ว สินค้า สต็อก และยอดขายจะอ่านและเขียนที่ Google Sheets</p>
+  </section>
+</main>
+
+<div class="cartbar" id="cartbar"><button id="open-cart"><span id="cart-count">0 ชิ้น</span><span>ชำระเงิน · <span id="cart-total">฿0</span></span></button></div>
+
+<nav>
+  <button class="active" data-view="sell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>ขาย</button>
+  <button data-view="stock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>สต็อก</button>
+  <button data-view="receipts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>ใบเสร็จ</button>
+  <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>ตั้งค่า</button>
+</nav>
+
+<!-- ตะกร้า / ชำระเงิน -->
+<div class="sheet-bg" id="cart-sheet">
+  <div class="sheet">
+    <h3>ตะกร้าสินค้า <button class="link" id="clear-cart">ล้างตะกร้า</button></h3>
+    <div class="list" id="cart-list"></div>
+    <div class="total"><span>รวมทั้งสิ้น</span><span id="sheet-total">฿0.00</span></div>
+    <input class="money-in" id="paid" type="number" inputmode="decimal" min="0" step="any" placeholder="รับเงินมา">
+    <div class="quick" id="quick"></div>
+    <div class="change"><span>เงินทอน</span><b id="change">฿0.00</b></div>
+    <div class="btns">
+      <button class="btn ghost" data-close="cart-sheet">ปิด</button>
+      <button class="btn" id="checkout-btn">ยืนยันการขาย</button>
+    </div>
+  </div>
+</div>
+
+<!-- ใบเสร็จ -->
+<div class="sheet-bg" id="receipt-sheet">
+  <div class="sheet">
+    <h3>ใบเสร็จรับเงิน <button class="link" data-close="receipt-sheet">ปิด</button></h3>
+    <div id="receipt-preview"></div>
+    <div class="btns">
+      <button class="btn ghost" id="share-btn">แชร์รูป</button>
+      <button class="btn" id="print-btn">พิมพ์</button>
+    </div>
+    <button class="link" id="sys-print-btn" style="display:block;margin:10px auto 0">พิมพ์ผ่านระบบ / บันทึก PDF</button>
+  </div>
+</div>
+
+<!-- เพิ่ม / แก้ไขสินค้า -->
+<div class="sheet-bg" id="prod-sheet">
+  <div class="sheet">
+    <h3><span id="prod-title">เพิ่มสินค้า</span> <button class="link" data-close="prod-sheet">ปิด</button></h3>
+    <div class="list">
+      <label class="field"><span>รหัสสินค้า (เว้นว่างไว้ ระบบจะสร้างให้ เช่น P007)</span><input id="pf-id" autocapitalize="characters" autocomplete="off"></label>
+      <label class="field"><span>ชื่อสินค้า</span><input id="pf-name" autocomplete="off"></label>
+      <label class="field"><span>ราคา (บาท)</span><input id="pf-price" type="number" inputmode="decimal" step="any" min="0"></label>
+      <label class="field" id="pf-stock-wrap"><span>จำนวนเริ่มต้น</span><input id="pf-stock" type="number" inputmode="numeric" min="0" placeholder="0"></label>
+    </div>
+    <p class="note" id="pf-note"></p>
+    <div class="btns">
+      <button class="btn ghost" id="pf-delete" style="color:var(--danger)">ลบสินค้า</button>
+      <button class="btn" id="pf-save">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  // ---------- storage (กันพังในเบราว์เซอร์ที่ปิด localStorage) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  const DEFAULT_CFG = { shopName: 'ร้านของฉัน', shopAddress: '', shopPhone: '', taxId: '', footer: 'ขอบคุณที่ใช้บริการ',
+    paper: '58', lowStock: 5, apiUrl: '', key: '', autoPrint: '1', btSpeed: 'normal' };
+  let cfg = Object.assign({}, DEFAULT_CFG, store.get('pos.cfg', {}));
+  let products = store.get('pos.products', []);
+  let cart = {};                      // id -> qty
+  let receipts = store.get('pos.receipts', []);
+  let currentReceipt = null;
+
+  // ---------- utils ----------
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = n => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money0 = n => '฿' + Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+  const r2 = n => Math.round(n * 100) / 100;
+  const thDate = iso => new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  let toastTimer;
+  function toast(msg, err) {
+    const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', err ? 3500 : 1800);
+  }
+
+  // ---------- API (Google Apps Script หรือโหมดเดโม) ----------
+  const demo = {
+    load() {
+      let p = store.get('pos.demoProducts', null);
+      if (!p) {
+        p = [
+          { id: 'P001', name: 'น้ำดื่ม', price: 10, stock: 50 }, { id: 'P002', name: 'กาแฟเย็น', price: 45, stock: 20 },
+          { id: 'P003', name: 'ขนมปัง', price: 25, stock: 15 }, { id: 'P004', name: 'ชาเขียว', price: 40, stock: 4 },
+          { id: 'P005', name: 'มาม่า', price: 7, stock: 100 }, { id: 'P006', name: 'ข้าวกล่อง', price: 50, stock: 8 },
+        ];
+        store.set('pos.demoProducts', p);
+      }
+      return p;
+    },
+    post(body) {
+      const p = demo.load();
+      const find = id => p.find(x => x.id === String(id));
+      if (body.action === 'adjust') {
+        const x = find(body.id); if (!x) throw new Error('ไม่พบสินค้า');
+        if (x.stock + body.delta < 0) throw new Error('สต็อกติดลบไม่ได้');
+        x.stock += body.delta; store.set('pos.demoProducts', p);
+        return { ok: true, id: x.id, stock: x.stock };
+      }
+      if (body.action === 'checkout') {
+        const lines = body.items.map(it => {
+          const x = find(it.id); if (!x) throw new Error('ไม่พบสินค้า ' + it.id);
+          if (x.stock < it.qty) throw new Error(`${x.name} สต็อกไม่พอ (เหลือ ${x.stock})`);
+          return { id: x.id, name: x.name, price: x.price, qty: it.qty, amount: r2(x.price * it.qty) };
+        });
+        const total = r2(lines.reduce((s, l) => s + l.amount, 0));
+        const paid = body.paid === '' || body.paid == null ? total : r2(+body.paid);
+        if (!(paid >= total)) throw new Error('รับเงินไม่พอ');
+        lines.forEach(l => find(l.id).stock -= l.qty); store.set('pos.demoProducts', p);
+        const now = new Date();
+        const day = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+        const seqs = store.get('pos.demoSeq', {}); seqs[day] = (seqs[day] || 0) + 1; store.set('pos.demoSeq', seqs);
+        return { ok: true, products: p, receipt: { receiptNo: `R${day}-${String(seqs[day]).padStart(4, '0')}`,
+          datetime: now.toISOString(), items: lines, total, paid, change: r2(paid - total) } };
+      }
+      if (body.action === 'saveProduct') {
+        const name = String(body.name || '').trim(), price = Number(body.price);
+        if (!name) throw new Error('กรุณาใส่ชื่อสินค้า');
+        if (body.price === '' || !(price >= 0)) throw new Error('ราคาไม่ถูกต้อง');
+        let id = String(body.id || '').trim();
+        if (body.isNew) {
+          if (!id) id = 'P' + String(p.reduce((m, x) => { const k = /^P(\d+)$/.exec(x.id); return k ? Math.max(m, +k[1]) : m; }, 0) + 1).padStart(3, '0');
+          if (find(id)) throw new Error('รหัส ' + id + ' มีอยู่แล้ว');
+          p.push({ id, name, price: r2(price), stock: Math.max(0, Math.trunc(+body.stock || 0)) });
+        } else {
+          const x = find(id); if (!x) throw new Error('ไม่พบสินค้า'); x.name = name; x.price = r2(price);
+        }
+        store.set('pos.demoProducts', p); return { ok: true, id, products: p };
+      }
+      if (body.action === 'deleteProduct') {
+        const i = p.findIndex(x => x.id === String(body.id)); if (i < 0) throw new Error('ไม่พบสินค้า');
+        p.splice(i, 1); store.set('pos.demoProducts', p); return { ok: true, products: p };
+      }
+      throw new Error('unknown action');
+    },
+  };
+
+  async function apiGetProducts() {
+    if (!cfg.apiUrl) return demo.load();
+    const u = new URL(cfg.apiUrl); if (cfg.key) u.searchParams.set('key', cfg.key);
+    const j = await (await fetch(u)).json();
+    if (!j.ok) throw new Error(j.error);
+    return j.products;
+  }
+  async function apiPost(body) {
+    if (!cfg.apiUrl) return demo.post(body);
+    // ไม่ใส่ Content-Type: application/json เพื่อเลี่ยง CORS preflight ที่ Apps Script ไม่รองรับ
+    const res = await fetch(cfg.apiUrl, { method: 'POST', body: JSON.stringify(Object.assign({}, body, { key: cfg.key })) });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error);
+    return j;
+  }
+
+  async function sync(silent) {
+    const btn = $('#sync-btn'); btn.style.opacity = .5;
+    try {
+      products = await apiGetProducts(); store.set('pos.products', products);
+      // ตัดรายการในตะกร้าที่เกินสต็อก
+      for (const id in cart) { const p = byId(id); if (!p) delete cart[id]; else if (cart[id] > p.stock) cart[id] = p.stock; if (cart[id] <= 0) delete cart[id]; }
+      renderAll(); if (!silent) toast('อัปเดตข้อมูลแล้ว');
+    } catch (e) {
+      renderAll(); toast('ซิงก์ไม่สำเร็จ: ' + (navigator.onLine ? e.message : 'ออฟไลน์อยู่ (แสดงข้อมูลล่าสุด)'), true);
+    } finally { btn.style.opacity = 1; }
+  }
+
+  const byId = id => products.find(p => p.id === id);
+
+  // ---------- render ----------
+  function renderHeader() {
+    $('#shop-title').textContent = cfg.shopName || 'ร้านค้า POS';
+    $('#mode-pill').textContent = cfg.apiUrl ? 'Sheets' : 'เดโม';
+  }
+
+  function filterList(q) {
+    q = q.trim().toLowerCase();
+    return q ? products.filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)) : products;
+  }
+
+  function renderGrid() {
+    const list = filterList($('#search').value);
+    $('#prod-grid').innerHTML = list.length ? list.map(p => {
+      const inCart = cart[p.id] || 0, left = p.stock - inCart;
+      return `<button class="prod" data-add="${esc(p.id)}" ${left <= 0 ? 'disabled' : ''}>
+        ${inCart ? `<span class="badge">${inCart}</span>` : ''}
+        <span class="name">${esc(p.name)}</span>
+        <span class="stock ${p.stock <= cfg.lowStock ? 'low' : ''}">${left <= 0 ? 'หมด' : 'เหลือ ' + left}</span>
+        <span class="price">${money0(p.price)}</span></button>`;
+    }).join('') : `<div class="empty" style="grid-column:1/-1">${products.length ? 'ไม่พบสินค้า' : 'ยังไม่มีสินค้า กดปุ่มซิงก์ หรือตั้งค่าการเชื่อมต่อ'}</div>`;
+  }
+
+  function cartTotals() {
+    let qty = 0, total = 0;
+    for (const id in cart) { const p = byId(id); if (p) { qty += cart[id]; total += p.price * cart[id]; } }
+    return { qty, total: r2(total) };
+  }
+
+  function renderCartBar() {
+    const { qty, total } = cartTotals();
+    $('#cartbar').classList.toggle('show', qty > 0 && $('#view-sell').classList.contains('active'));
+    $('#cart-count').textContent = qty + ' ชิ้น';
+    $('#cart-total').textContent = money0(total);
+  }
+
+  function renderCartSheet() {
+    const ids = Object.keys(cart);
+    $('#cart-list').innerHTML = ids.length ? ids.map(id => {
+      const p = byId(id); if (!p) return '';
+      return `<div class="row"><div class="grow"><div>${esc(p.name)}</div><div class="sub">${money0(p.price)} × ${cart[id]} = ${money(p.price * cart[id])}</div></div>
+        <div class="stepper"><button data-cart="${esc(id)}" data-d="-1">−</button><span class="val">${cart[id]}</span><button data-cart="${esc(id)}" data-d="1">+</button></div></div>`;
+    }).join('') : '<div class="empty">ตะกร้าว่าง</div>';
+    const { total } = cartTotals();
+    $('#sheet-total').textContent = money(total);
+    const notes = [...new Set([total, Math.ceil(total / 20) * 20, Math.ceil(total / 100) * 100, 500, 1000].filter(v => v >= total))].slice(0, 5);
+    $('#quick').innerHTML = notes.map((v, i) => `<button data-paid="${v}">${i === 0 ? 'พอดี' : money0(v)}</button>`).join('');
+    renderChange();
+    $('#checkout-btn').disabled = !ids.length;
+  }
+
+  function renderChange() {
+    const { total } = cartTotals();
+    const raw = $('#paid').value;
+    const paid = raw === '' ? total : +raw;
+    const ch = r2(paid - total);
+    const el = $('#change');
+    el.textContent = ch < 0 ? 'ขาด ' + money(-ch) : money(ch);
+    el.classList.toggle('neg', ch < 0);
+  }
+
+  function renderStock() {
+    const list = filterList($('#search-stock').value);
+    $('#stock-list').innerHTML = list.length ? list.map(p => `<div class="row">
+      <div class="grow"><div>${esc(p.name)}</div><div class="sub">${esc(p.id)} · ${money0(p.price)}</div>
+        <div><button class="link" data-edit="${esc(p.id)}">แก้ไข</button> · <button class="link" data-bulk="${esc(p.id)}">ปรับหลายชิ้น</button></div></div>
+      <div class="stepper"><button data-adj="${esc(p.id)}" data-d="-1">−</button><span class="val ${p.stock <= cfg.lowStock ? 'low' : ''}">${p.stock}</span><button data-adj="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')
+      : '<div class="empty">ไม่มีสินค้า</div>';
+  }
+
+  function renderReceipts() {
+    $('#receipt-list').innerHTML = receipts.length ? receipts.map((r, i) => `<button class="row" style="width:100%;text-align:left" data-rcpt="${i}">
+      <div class="grow"><div><b>${esc(r.receiptNo)}</b></div><div class="sub">${thDate(r.datetime)} · ${r.items.reduce((s, x) => s + x.qty, 0)} ชิ้น</div></div>
+      <b>${money(r.total)}</b></button>`).join('') : '<div class="empty">ยังไม่มีใบเสร็จ</div>';
+  }
+
+  function renderAll() { renderHeader(); renderGrid(); renderCartBar(); renderStock(); renderReceipts(); }
+
+  // ---------- receipt ----------
+  function receiptHTML(r) {
+    const c = r.shop || cfg;
+    const items = r.items.map(it => `<div>${esc(it.name)}</div>
+      <div class="ln item-sub"><span>${it.qty} × ${Number(it.price).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span><span>${Number(it.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span></div>`).join('');
+    const qty = r.items.reduce((s, x) => s + x.qty, 0);
+    return `<div class="paper w${cfg.paper}">
+      <div class="c shop">${esc(c.shopName)}</div>
+      ${c.shopAddress ? `<div class="c">${esc(c.shopAddress)}</div>` : ''}
+      ${c.shopPhone ? `<div class="c">โทร ${esc(c.shopPhone)}</div>` : ''}
+      ${c.taxId ? `<div class="c">เลขผู้เสียภาษี ${esc(c.taxId)}</div>` : ''}
+      <hr><div class="c big">ใบเสร็จรับเงิน</div>
+      <div class="ln"><span>เลขที่</span><span>${esc(r.receiptNo)}</span></div>
+      <div class="ln"><span>วันที่</span><span>${thDate(r.datetime)}</span></div>
+      <hr>${items}<hr>
+      <div class="ln"><span>จำนวน</span><span>${qty} ชิ้น</span></div>
+      <div class="ln big"><span>รวมทั้งสิ้น</span><span>${money(r.total)}</span></div>
+      <div class="ln"><span>รับเงิน</span><span>${money(r.paid)}</span></div>
+      <div class="ln"><span>เงินทอน</span><span>${money(r.change)}</span></div>
+      <hr><div class="c">${esc(c.footer || '')}</div></div>`;
+  }
+
+  function receiptText(r) {
+    const c = r.shop || cfg;
+    return [c.shopName, 'ใบเสร็จ ' + r.receiptNo, thDate(r.datetime), '-----',
+      ...r.items.map(it => `${it.name} ${it.qty} x ${it.price} = ${it.amount}`), '-----',
+      'รวม ' + money(r.total), 'รับเงิน ' + money(r.paid), 'เงินทอน ' + money(r.change), c.footer || ''].join('\n');
+  }
+
+  function showReceipt(r) {
+    currentReceipt = r;
+    $('#receipt-preview').innerHTML = receiptHTML(r);
+    openSheet('receipt-sheet');
+  }
+
+  function printReceipt() {
+    if (!currentReceipt) return;
+    $('#page-size').textContent = `@page { size: ${cfg.paper}mm auto; margin: 3mm 0; }`;
+    $('#print-area').innerHTML = receiptHTML(currentReceipt);
+    window.print();
+  }
+
+  // ---------- วาดใบเสร็จเป็นรูป (ใช้ทั้งพิมพ์ Bluetooth และแชร์รูป) ----------
+  function receiptCanvas(r) {
+    const c = r.shop || cfg;
+    const W = cfg.paper === '80' ? 576 : 384;          // จุดต่อบรรทัดของหัวพิมพ์ 203dpi
+    const pad = 6, base = W === 384 ? 22 : 26;
+    const FONT = '"Sarabun","Noto Sans Thai","Thonburi","Leelawadee UI",Tahoma,sans-serif';
+    const fmt = n => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const ops = [];
+    const T = (text, o = {}) => text && ops.push(Object.assign({ t: 'text', text: String(text) }, o));
+    const LR = (l, rt, o = {}) => ops.push(Object.assign({ t: 'lr', l: String(l), r: String(rt) }, o));
+    const HR = () => ops.push({ t: 'hr' });
+
+    T(c.shopName, { align: 'center', bold: true, size: base * 1.35 });
+    T(c.shopAddress, { align: 'center' });
+    if (c.shopPhone) T('โทร ' + c.shopPhone, { align: 'center' });
+    if (c.taxId) T('เลขผู้เสียภาษี ' + c.taxId, { align: 'center' });
+    HR(); T('ใบเสร็จรับเงิน', { align: 'center', bold: true, size: base * 1.15 });
+    LR('เลขที่', r.receiptNo); LR('วันที่', thDate(r.datetime)); HR();
+    r.items.forEach(it => { T(it.name); LR('   ' + it.qty + ' x ' + fmt(it.price), fmt(it.amount)); });
+    HR(); LR('จำนวน', r.items.reduce((s, x) => s + x.qty, 0) + ' ชิ้น');
+    LR('รวมทั้งสิ้น', '฿' + fmt(r.total), { bold: true, size: base * 1.2 });
+    LR('รับเงิน', '฿' + fmt(r.paid)); LR('เงินทอน', '฿' + fmt(r.change)); HR();
+    T(c.footer, { align: 'center' });
+
+    const cv = document.createElement('canvas'), ctx = cv.getContext('2d');
+    const setFont = o => ctx.font = `${o.bold ? '700' : '400'} ${Math.round(o.size || base)}px ${FONT}`;
+    const seg = window.Intl && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'word' }) : null;
+    const wrap = (text, maxW) => {
+      const words = seg ? [...seg.segment(text)].map(s => s.segment) : [...text];
+      const out = []; let line = '';
+      for (const w of words) {
+        if (ctx.measureText(line + w).width > maxW && line) { out.push(line); line = w.trimStart(); }
+        else line += w;
+      }
+      if (line) out.push(line);
+      return out;
+    };
+    // รอบแรก: คำนวณบรรทัดและความสูง
+    const lines = [];
+    for (const o of ops) {
+      const size = o.size || base, lh = Math.round(size * 1.55);
+      if (o.t === 'hr') { lines.push({ t: 'hr', h: 14 }); continue; }
+      setFont(o);
+      if (o.t === 'text') wrap(o.text, W - pad * 2).forEach(s => lines.push(Object.assign({}, o, { text: s, h: lh })));
+      else lines.push(Object.assign({}, o, { h: lh }));
+    }
+    const H = lines.reduce((s, l) => s + l.h, 0) + pad * 2;
+    cv.width = W; cv.height = Math.ceil(H);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, cv.height);
+    ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; ctx.textBaseline = 'alphabetic';
+    // รอบสอง: วาด
+    let y = pad;
+    for (const l of lines) {
+      if (l.t === 'hr') {
+        ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
+        ctx.moveTo(pad, y + 7); ctx.lineTo(W - pad, y + 7); ctx.stroke(); ctx.setLineDash([]);
+      } else {
+        setFont(l);
+        const by = y + Math.round((l.size || base) * 1.12);
+        if (l.t === 'text') {
+          ctx.textAlign = l.align === 'center' ? 'center' : 'left';
+          ctx.fillText(l.text, l.align === 'center' ? W / 2 : pad, by);
+        } else {
+          ctx.textAlign = 'left'; ctx.fillText(l.l, pad, by);
+          ctx.textAlign = 'right'; ctx.fillText(l.r, W - pad, by);
+        }
+      }
+      y += l.h;
+    }
+    return cv;
+  }
+
+  // รูป → คำสั่ง ESC/POS แบบ raster (GS v 0) ส่งเป็นช่วงๆ ละไม่เกิน 128 แถว
+  function canvasToEscPos(cv) {
+    const W = cv.width, H = cv.height, bw = W >> 3;
+    const px = cv.getContext('2d').getImageData(0, 0, W, H).data;
+    const parts = [new Uint8Array([0x1b, 0x40])];                       // ESC @ รีเซ็ต
+    for (let y0 = 0; y0 < H; y0 += 128) {
+      const h = Math.min(128, H - y0), buf = new Uint8Array(8 + bw * h);
+      buf.set([0x1d, 0x76, 0x30, 0x00, bw & 255, bw >> 8, h & 255, h >> 8]);
+      for (let y = 0; y < h; y++) for (let x = 0; x < W; x++) {
+        const i = ((y0 + y) * W + x) * 4;
+        if (px[i] * .299 + px[i + 1] * .587 + px[i + 2] * .114 < 150) buf[8 + y * bw + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+      parts.push(buf);
+    }
+    parts.push(new Uint8Array([0x1b, 0x64, 0x04]));                     // ป้อนกระดาษ 4 บรรทัด
+    const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
+    let o = 0; parts.forEach(p => { out.set(p, o); o += p.length; });
+    return out;
+  }
+
+  // ---------- เครื่องพิมพ์ Bluetooth (Web Bluetooth / BLE) ----------
+  const PRINTER_SERVICES = [
+    '000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+    '49535343-fe7d-4ae5-8fa9-9fafd205e455', '0000ff00-0000-1000-8000-00805f9b34fb',
+    '0000ffe0-0000-1000-8000-00805f9b34fb', '0000fff0-0000-1000-8000-00805f9b34fb',
+    '0000ae30-0000-1000-8000-00805f9b34fb', '0000ae00-0000-1000-8000-00805f9b34fb',
+  ];
+  const bt = { device: null, ch: null };
+  const hasBT = () => !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+
+  async function btConnect(pickNew) {
+    if (!hasBT()) throw new Error('เบราว์เซอร์นี้ไม่รองรับ Bluetooth');
+    if (!bt.device || pickNew) {
+      bt.device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: PRINTER_SERVICES });
+      bt.device.addEventListener('gattserverdisconnected', () => { bt.ch = null; renderPrinter(); });
+    }
+    const server = bt.device.gatt.connected ? bt.device.gatt : await bt.device.gatt.connect();
+    bt.ch = null;
+    for (const uuid of PRINTER_SERVICES) {
+      let svc;
+      try { svc = await server.getPrimaryService(uuid); } catch { continue; }
+      const chars = await svc.getCharacteristics();
+      const ch = chars.find(x => x.properties.writeWithoutResponse) || chars.find(x => x.properties.write);
+      if (ch) { bt.ch = ch; break; }
+    }
+    if (!bt.ch) throw new Error('เชื่อมต่อได้ แต่ไม่พบช่องส่งงานพิมพ์ (เครื่องนี้อาจรองรับแค่ Bluetooth แบบเก่า)');
+    store.set('pos.printerName', bt.device.name || 'เครื่องพิมพ์');
+    renderPrinter();
+  }
+
+  async function btSend(bytes) {
+    if (!bt.ch || !bt.device.gatt.connected) await btConnect(false);
+    const ch = bt.ch, slow = cfg.btSpeed === 'slow';
+    const noResp = ch.properties.writeWithoutResponse && ch.writeValueWithoutResponse;
+    const size = slow ? 20 : (noResp ? 100 : 180), wait = slow ? 25 : (noResp ? 12 : 0);
+    for (let i = 0; i < bytes.length; i += size) {
+      const chunk = bytes.slice(i, i + size);
+      if (noResp) await ch.writeValueWithoutResponse(chunk);
+      else await (ch.writeValueWithResponse ? ch.writeValueWithResponse(chunk) : ch.writeValue(chunk));
+      if (wait) await new Promise(r => setTimeout(r, wait));
+    }
+  }
+
+  let printing = false;
+  async function btPrint(r) {
+    if (printing) return;
+    printing = true; const btn = $('#print-btn'); btn.disabled = true; btn.textContent = 'กำลังพิมพ์…';
+    try { await btSend(canvasToEscPos(receiptCanvas(r))); toast('พิมพ์แล้ว'); return true; }
+    catch (e) {
+      if (e.name !== 'NotFoundError') toast('พิมพ์ไม่สำเร็จ: ' + e.message, true);   // NotFoundError = ผู้ใช้กดยกเลิก
+      return false;
+    } finally { printing = false; btn.disabled = false; btn.textContent = 'พิมพ์'; }
+  }
+
+  function renderPrinter() {
+    const connected = bt.device && bt.device.gatt.connected && bt.ch;
+    const last = store.get('pos.printerName', '');
+    $('#printer-name').textContent = connected ? '🟢 ' + (bt.device.name || 'เครื่องพิมพ์') : 'ยังไม่ได้เชื่อมต่อ';
+    $('#printer-sub').textContent = connected ? 'พร้อมพิมพ์ · กระดาษ ' + cfg.paper + ' มม.' : (last ? 'ล่าสุด: ' + last : 'เครื่องพิมพ์ความร้อนที่รองรับ Bluetooth LE');
+    $('#bt-connect').textContent = connected ? 'เปลี่ยนเครื่อง' : 'เชื่อมต่อ';
+    $('#bt-note').innerHTML = hasBT()
+      ? 'เปิดแอปใหม่ทุกครั้ง ต้องกด “เชื่อมต่อ” ใหม่หนึ่งครั้ง (เป็นข้อจำกัดด้านความปลอดภัยของเบราว์เซอร์)'
+      : '<b>เบราว์เซอร์นี้ส่งงานพิมพ์ทาง Bluetooth ไม่ได้</b> บน iPhone/iPad ให้ติดตั้งแอป <b>Bluefy – Web BLE Browser</b> จาก App Store แล้วเปิดเว็บนี้ใน Bluefy แทน Safari ส่วน Android ใช้ Chrome ได้เลย';
+  }
+
+  // ---------- actions ----------
+  function openSheet(id) { $('#' + id).classList.add('show'); }
+  function closeSheet(id) { $('#' + id).classList.remove('show'); }
+
+  function addToCart(id, d = 1) {
+    const p = byId(id); if (!p) return;
+    const next = (cart[id] || 0) + d;
+    if (next > p.stock) return toast('สต็อกไม่พอ', true);
+    if (next <= 0) delete cart[id]; else cart[id] = next;
+    renderGrid(); renderCartBar();
+    if ($('#cart-sheet').classList.contains('show')) renderCartSheet();
+  }
+
+  let busy = false;
+  async function checkout() {
+    if (busy) return;
+    const items = Object.keys(cart).map(id => ({ id, qty: cart[id] }));
+    if (!items.length) return;
+    const { total } = cartTotals();
+    const raw = $('#paid').value;
+    if (raw !== '' && +raw < total) return toast('รับเงินไม่พอ', true);
+    busy = true; const btn = $('#checkout-btn'); btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    try {
+      const res = await apiPost({ action: 'checkout', items, paid: raw === '' ? '' : +raw });
+      const r = res.receipt;
+      r.shop = { shopName: cfg.shopName, shopAddress: cfg.shopAddress, shopPhone: cfg.shopPhone, taxId: cfg.taxId, footer: cfg.footer };
+      receipts.unshift(r); receipts = receipts.slice(0, 200); store.set('pos.receipts', receipts);
+      if (res.products) { products = res.products; store.set('pos.products', products); }
+      cart = {}; $('#paid').value = '';
+      closeSheet('cart-sheet'); renderAll(); showReceipt(r);
+      // พิมพ์อัตโนมัติ เมื่อเชื่อมต่อเครื่องพิมพ์ไว้แล้ว
+      if (cfg.autoPrint === '1' && hasBT() && bt.device) btPrint(r);
+    } catch (e) {
+      toast('ขายไม่สำเร็จ: ' + (navigator.onLine ? e.message : 'ไม่มีอินเทอร์เน็ต'), true);
+      if (cfg.apiUrl && navigator.onLine) sync(true);
+    } finally { busy = false; btn.textContent = 'ยืนยันการขาย'; btn.disabled = !Object.keys(cart).length; }
+  }
+
+  async function adjustStock(id, delta, note) {
+    const p = byId(id); if (!p || !delta) return;
+    if (p.stock + delta < 0) return toast('สต็อกติดลบไม่ได้', true);
+    const before = p.stock; p.stock += delta; renderStock(); renderGrid();   // อัปเดตบนจอทันที
+    try {
+      const res = await apiPost({ action: 'adjust', id, delta, note });
+      p.stock = res.stock; store.set('pos.products', products);
+    } catch (e) {
+      p.stock = before; toast('ปรับสต็อกไม่สำเร็จ: ' + e.message, true);
+    }
+    renderStock(); renderGrid();
+  }
+
+  // ---------- เพิ่ม / แก้ไข / ลบสินค้า ----------
+  let editingId = null;
+  function openProductForm(id) {
+    editingId = id || null;
+    const p = id ? byId(id) : null;
+    $('#prod-title').textContent = p ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า';
+    $('#pf-id').value = p ? p.id : ''; $('#pf-id').readOnly = !!p; $('#pf-id').style.opacity = p ? .5 : 1;
+    $('#pf-name').value = p ? p.name : '';
+    $('#pf-price').value = p ? p.price : '';
+    $('#pf-stock').value = '';
+    $('#pf-stock-wrap').style.display = p ? 'none' : '';
+    $('#pf-delete').style.display = p ? '' : 'none';
+    $('#pf-note').textContent = p ? `สต็อกตอนนี้ ${p.stock} ชิ้น · ปรับจำนวนด้วยปุ่ม − / + ในหน้าสต็อก (เพื่อให้มีประวัติใน StockLog)` : '';
+    openSheet('prod-sheet');
+    setTimeout(() => $(p ? '#pf-name' : '#pf-name').focus(), 50);
+  }
+
+  function applyProducts(list) {
+    products = list; store.set('pos.products', products);
+    for (const id in cart) if (!byId(id)) delete cart[id];
+    renderAll();
+  }
+
+  async function saveProduct() {
+    const body = { action: 'saveProduct', isNew: !editingId, id: $('#pf-id').value.trim(),
+      name: $('#pf-name').value.trim(), price: $('#pf-price').value, stock: $('#pf-stock').value };
+    if (!body.name) return toast('กรุณาใส่ชื่อสินค้า', true);
+    if (body.price === '' || +body.price < 0) return toast('กรุณาใส่ราคาให้ถูกต้อง', true);
+    const btn = $('#pf-save'); btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    try {
+      const res = await apiPost(body);
+      applyProducts(res.products); closeSheet('prod-sheet');
+      toast(editingId ? 'แก้ไขแล้ว' : 'เพิ่มสินค้า ' + res.id + ' แล้ว');
+    } catch (e) { toast('บันทึกไม่สำเร็จ: ' + e.message, true); }
+    finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
+  }
+
+  async function deleteProduct() {
+    const p = byId(editingId); if (!p) return;
+    if (!confirm(`ลบ "${p.name}" ออกจากรายการสินค้า?\nประวัติการขายเดิมยังอยู่ในชีตครบ`)) return;
+    const btn = $('#pf-delete'); btn.disabled = true;
+    try {
+      const res = await apiPost({ action: 'deleteProduct', id: p.id });
+      applyProducts(res.products); closeSheet('prod-sheet'); toast('ลบ ' + p.name + ' แล้ว');
+    } catch (e) { toast('ลบไม่สำเร็จ: ' + e.message, true); }
+    finally { btn.disabled = false; }
+  }
+
+  // ---------- events ----------
+  $('#add-prod').addEventListener('click', () => openProductForm(null));
+  $('#pf-save').addEventListener('click', saveProduct);
+  $('#pf-delete').addEventListener('click', deleteProduct);
+  $$('nav button').forEach(b => b.addEventListener('click', () => {
+    $$('nav button').forEach(x => x.classList.toggle('active', x === b));
+    $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + b.dataset.view));
+    renderCartBar(); window.scrollTo(0, 0);
+  }));
+
+  $('#prod-grid').addEventListener('click', e => { const b = e.target.closest('[data-add]'); if (b && !b.disabled) addToCart(b.dataset.add); });
+  $('#search').addEventListener('input', renderGrid);
+  $('#search-stock').addEventListener('input', renderStock);
+  $('#open-cart').addEventListener('click', () => { renderCartSheet(); openSheet('cart-sheet'); });
+  $('#cart-list').addEventListener('click', e => { const b = e.target.closest('[data-cart]'); if (b) addToCart(b.dataset.cart, +b.dataset.d); });
+  $('#clear-cart').addEventListener('click', () => { cart = {}; renderCartSheet(); renderGrid(); renderCartBar(); });
+  $('#quick').addEventListener('click', e => { const b = e.target.closest('[data-paid]'); if (b) { $('#paid').value = b.dataset.paid; renderChange(); } });
+  $('#paid').addEventListener('input', renderChange);
+  $('#checkout-btn').addEventListener('click', checkout);
+  $$('[data-close]').forEach(b => b.addEventListener('click', () => closeSheet(b.dataset.close)));
+  $$('.sheet-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
+
+  $('#stock-list').addEventListener('click', e => {
+    const a = e.target.closest('[data-adj]');
+    if (a) return adjustStock(a.dataset.adj, +a.dataset.d);
+    const ed = e.target.closest('[data-edit]');
+    if (ed) return openProductForm(ed.dataset.edit);
+    const b = e.target.closest('[data-bulk]');
+    if (b) {
+      const p = byId(b.dataset.bulk);
+      const v = prompt(`ปรับสต็อก "${p.name}" (ตอนนี้ ${p.stock})\nใส่ +10 = รับเข้า 10 ชิ้น, -3 = ตัดออก 3 ชิ้น`, '+');
+      const n = Math.trunc(Number(v));
+      if (v != null && n) adjustStock(p.id, n, n > 0 ? 'รับสินค้าเข้า' : 'ตัดสต็อก');
+    }
+  });
+
+  $('#receipt-list').addEventListener('click', e => { const b = e.target.closest('[data-rcpt]'); if (b) showReceipt(receipts[+b.dataset.rcpt]); });
+  $('#print-btn').addEventListener('click', () => {
+    if (!currentReceipt) return;
+    if (hasBT()) btPrint(currentReceipt);
+    else { toast('เบราว์เซอร์นี้ใช้ Bluetooth ไม่ได้ ให้เปิดผ่าน Bluefy (ดูหน้าตั้งค่า)', true); printReceipt(); }
+  });
+  $('#sys-print-btn').addEventListener('click', printReceipt);
+  $('#share-btn').addEventListener('click', async () => {
+    if (!currentReceipt) return;
+    const r = currentReceipt;
+    try {
+      const blob = await new Promise(res => receiptCanvas(r).toBlob(res, 'image/png'));
+      const file = new File([blob], r.receiptNo + '.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'ใบเสร็จ ' + r.receiptNo });
+      } else if (navigator.share) {
+        await navigator.share({ title: 'ใบเสร็จ ' + r.receiptNo, text: receiptText(r) });
+      } else {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+      }
+    } catch {}
+  });
+  $('#bt-connect').addEventListener('click', async () => {
+    try { await btConnect(true); toast('เชื่อมต่อเครื่องพิมพ์แล้ว'); }
+    catch (e) { if (e.name !== 'NotFoundError') toast(e.message, true); }
+  });
+  $('#bt-test').addEventListener('click', () => {
+    if (!hasBT()) return toast('เบราว์เซอร์นี้ใช้ Bluetooth ไม่ได้', true);
+    btPrint({ receiptNo: 'TEST-0001', datetime: new Date().toISOString(), total: 55, paid: 100, change: 45,
+      shop: readSettings(), items: [{ name: 'ทดสอบภาษาไทย ก่อนพิมพ์จริง', qty: 1, price: 10, amount: 10 }, { name: 'กาแฟเย็น', qty: 1, price: 45, amount: 45 }] });
+  });
+  $('#sync-btn').addEventListener('click', () => sync());
+
+  // settings
+  const CFG_KEYS = ['shopName', 'shopAddress', 'shopPhone', 'taxId', 'footer', 'paper', 'lowStock', 'apiUrl', 'key', 'autoPrint', 'btSpeed'];
+  function fillSettings() { CFG_KEYS.forEach(k => $('#cfg-' + k).value = cfg[k] ?? ''); }
+  function readSettings() {
+    const c = {}; CFG_KEYS.forEach(k => c[k] = $('#cfg-' + k).value.trim());
+    c.lowStock = Number(c.lowStock) || 0; return c;
+  }
+  $('#save-btn').addEventListener('click', () => {
+    const urlChanged = readSettings().apiUrl !== cfg.apiUrl;
+    cfg = Object.assign({}, cfg, readSettings()); store.set('pos.cfg', cfg);
+    if (urlChanged) cart = {};
+    toast('บันทึกแล้ว'); renderPrinter(); sync(true);
+  });
+  $('#test-btn').addEventListener('click', async () => {
+    const old = cfg; cfg = Object.assign({}, cfg, readSettings());
+    try { const p = await apiGetProducts(); toast(`เชื่อมต่อได้ · พบสินค้า ${p.length} รายการ`); }
+    catch (e) { toast('เชื่อมต่อไม่ได้: ' + e.message, true); }
+    finally { cfg = old; }
+  });
+
+  // ---------- start ----------
+  fillSettings(); renderAll(); renderPrinter(); sync(true);
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
